@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rexpocalypse</title>
+<style>
+  :root{
+    --bg:#0A0A0A;
+    --card:#141412;
+    --ink:#EDEAE0;
+    --sub:#8C887C;
+    --stamp:#4FC3E8;
+    --stamp-soft:#0F2A33;
+    --ok:#8FBF5C;
+    --ok-soft:#182212;
+    --line:#2A2A26;
+    --disp: 'Space Grotesk', 'Courier New', monospace;
+    --body: 'Space Grotesk', 'Courier New', monospace;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--body);
+    min-height:100vh; padding:32px 16px; display:flex; justify-content:center;
+    background-image: radial-gradient(circle at 1px 1px, #1a1a17 1px, transparent 0);
+    background-size: 18px 18px;
+  }
+  .app{width:100%; max-width:420px;}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px;}
+  .brand{font-weight:700; font-size:18px; letter-spacing:-0.02em; text-transform:lowercase;}
+  .brand span{color:var(--stamp);}
+  .tag{font-size:10.5px; color:var(--sub); text-transform:lowercase; letter-spacing:0.02em;}
+
+  .hero{border:1px dashed var(--line); border-radius:2px; padding:16px; margin-bottom:16px; position:relative;}
+  .hero .stamp{
+    position:absolute; top:-10px; right:14px; background:var(--stamp); color:#0A1418;
+    font-size:10px; font-weight:700; padding:3px 9px; transform:rotate(-3deg); letter-spacing:0.03em;
+    text-transform:lowercase;
+  }
+  .hero h1{font-size:16px; font-weight:700; margin:0 0 6px; text-transform:lowercase; line-height:1.4;}
+  .hero p{font-size:12.5px; color:var(--sub); margin:0; line-height:1.55;}
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:2px; padding:16px; margin-bottom:12px;
+  }
+  .card h2{
+    font-size:12px; text-transform:lowercase; letter-spacing:0.04em; color:var(--sub);
+    margin:0 0 12px; font-weight:700; display:flex; align-items:center; gap:6px;
+  }
+  .card h2::before{content:'//'; color:var(--stamp);}
+
+  label{font-size:11.5px; color:var(--sub); display:block; margin-bottom:5px; text-transform:lowercase;}
+  input[type=text]{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:2px;
+    font-size:14px; font-family:var(--body); background:#0A0A0A; color:var(--ink);
+  }
+  input[type=text]::placeholder{color:#54514A;}
+  input[type=text]:focus{outline:none; border-color:var(--stamp);}
+
+  .chip-row{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;}
+  .chip{
+    font-family:var(--body); font-size:11px; text-transform:lowercase; padding:6px 11px; border-radius:2px;
+    background:transparent; color:var(--sub); border:1px solid var(--line); cursor:pointer;
+  }
+  .chip.active{background:var(--stamp-soft); color:var(--stamp); border-color:var(--stamp);}
+
+  .medrow{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 12px; border:1px solid var(--line); border-radius:2px; margin-bottom:7px;
+  }
+  .medrow .name{font-weight:500; font-size:13px; flex:1;}
+  .medrow button{background:none; border:none; color:var(--sub); font-size:14px; cursor:pointer; font-family:var(--body);}
+
+  .result-card{
+    border:1px solid var(--line); border-radius:2px; padding:12px 13px; margin-bottom:9px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .result-name{font-weight:700; font-size:13.5px; margin:0 0 2px; text-transform:lowercase;}
+  .result-meta{font-size:11.5px; color:var(--sub); font-family:var(--body);}
+  .badge{
+    font-size:10px; font-weight:700; padding:4px 9px; border-radius:2px; background:var(--ok-soft); color:var(--ok);
+    white-space:nowrap; text-transform:lowercase;
+  }
+
+  .cta{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--stamp); color:#0A1418; font-weight:700; font-size:13.5px; text-transform:lowercase;
+    padding:12px; border-radius:2px; border:none; width:100%; cursor:pointer; margin-top:2px;
+  }
+
+  .tier-switch{display:flex; font-size:10px; text-transform:lowercase; border:1px solid var(--line); border-radius:3px; overflow:hidden;}
+  .tier-switch button{border:none; background:transparent; color:var(--sub); padding:5px 9px; cursor:pointer; font-family:var(--body);}
+  .tier-switch button.active{background:var(--stamp); color:#0A1418;}
+
+  .locked{
+    display:flex; align-items:center; gap:8px; padding:9px 12px; border:1px dashed var(--line);
+    border-radius:2px; font-size:11.5px; color:var(--sub); margin-top:7px; text-transform:lowercase;
+  }
+  .locked button{
+    margin-left:auto; font-size:10.5px; background:var(--stamp); color:#0A1418; border:none;
+    padding:4px 9px; border-radius:2px; cursor:pointer; text-transform:lowercase; font-family:var(--body); font-weight:700;
+  }
+
+  .paywall{
+    border:1px dashed var(--stamp); border-radius:2px; padding:16px; text-align:center; margin-top:2px;
+  }
+  .paywall p{font-size:11.5px; color:var(--sub); margin:0 0 10px; text-transform:lowercase; line-height:1.5;}
+  .paywall button{
+    background:var(--stamp); color:#0A1418; border:none; font-weight:700; font-size:12px;
+    padding:8px 16px; border-radius:2px; cursor:pointer; text-transform:lowercase;
+  }
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">rex<span>pocalypse</span></div>
+    <div class="tier-switch">
+      <button id="freeBtn" class="active" onclick="setTier(false)">free</button>
+      <button id="paidBtn" onclick="setTier(true)">paid</button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h1 style="text-transform:none;">we can't REALLY deliver your meds at the end of the world, but we can help you find them, when times get tough.</h1>
+  </div>
+
+  <div class="card">
+    <h2>find a med</h2>
+    <label for="medInput">medication name</label>
+    <input type="text" id="medInput" placeholder="try 'metformin'...">
+    <div class="chip-row">
+      <button class="chip active">delivery only</button>
+      <button class="chip">within 3 mi</button>
+      <button class="chip">all options</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>yr saved list</h2>
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <input type="text" id="newMedInput" placeholder="add a med, e.g. lisinopril 10mg" style="flex:1;">
+      <button onclick="addMed()" style="background:var(--stamp); color:#0A1418; border:none; border-radius:2px; padding:0 12px; font-weight:700; cursor:pointer; text-transform:lowercase; font-family:var(--body);">add</button>
+    </div>
+    <div id="medListContainer"></div>
+    <div class="locked hidden" id="medLock">
+      free plan holds 2 meds. you're over, on us for now.
+      <button onclick="setTier(true)">go paid</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>nearby, ready now</h2>
+    <div class="chip-row" style="margin-top:0; margin-bottom:12px;">
+      <button class="chip">3 mi radius</button>
+      <button class="chip active">all delivery options</button>
+    </div>
+    <div class="locked" id="radiusLock" style="margin-top:0; margin-bottom:12px;">
+      radius filtering is a paid thing.
+      <button onclick="setTier(true)">go paid</button>
+    </div>
+    <div class="result-card">
+      <div>
+        <p class="result-name">capsule pharmacy</p>
+        <p class="result-meta">same-day · 1.2 mi</p>
+      </div>
+      <span class="badge">delivers</span>
+    </div>
+    <div class="result-card">
+      <div>
+        <p class="result-name">amazon pharmacy</p>
+        <p class="result-meta">next-day</p>
+      </div>
+      <span class="badge">delivers</span>
+    </div>
+    <button class="cta">rexpocalypse me</button>
+  </div>
+
+  <div class="card paywall" id="paywallCard">
+    <p>paid unlocks: unlimited saved meds, radius filtering, offline caching for when the signal drops.</p>
+    <button onclick="setTier(true)">go paid — $6/mo</button>
+  </div>
+
+  <p class="footer">no data sold. ever.</p>
+
+</div>
+<script>
+var isPaid = false;
+var FREE_LIMIT = 2;
+
+function loadMeds(){
+  try{
+    var raw = localStorage.getItem('rexpocalypse_meds');
+    return raw ? JSON.parse(raw) : ['lisinopril 10mg', 'sertraline 50mg'];
+  }catch(e){ return ['lisinopril 10mg', 'sertraline 50mg']; }
+}
+function saveMeds(list){
+  try{ localStorage.setItem('rexpocalypse_meds', JSON.stringify(list)); }catch(e){}
+}
+
+function renderMeds(){
+  var list = loadMeds();
+  var container = document.getElementById('medListContainer');
+  container.innerHTML = '';
+  list.forEach(function(name, i){
+    var row = document.createElement('div');
+    row.className = 'medrow';
+    row.innerHTML = '<div class="name"></div><button aria-label="remove">✕</button>';
+    row.querySelector('.name').textContent = name;
+    row.querySelector('button').onclick = function(){ removeMed(i); };
+    container.appendChild(row);
+  });
+  var lock = document.getElementById('medLock');
+  lock.classList.toggle('hidden', isPaid || list.length <= FREE_LIMIT);
+}
+
+function addMed(){
+  var input = document.getElementById('newMedInput');
+  var name = input.value.trim();
+  if(!name) return;
+  var list = loadMeds();
+  if(!isPaid && list.length >= FREE_LIMIT){
+    renderMeds();
+    return;
+  }
+  list.push(name);
+  saveMeds(list);
+  input.value = '';
+  renderMeds();
+}
+
+function removeMed(index){
+  var list = loadMeds();
+  list.splice(index, 1);
+  saveMeds(list);
+  renderMeds();
+}
+
+function setTier(paid){
+  isPaid = paid;
+  document.getElementById('freeBtn').classList.toggle('active', !paid);
+  document.getElementById('paidBtn').classList.toggle('active', paid);
+  document.getElementById('radiusLock').classList.toggle('hidden', paid);
+  document.getElementById('paywallCard').classList.toggle('hidden', paid);
+  renderMeds();
+}
+
+renderMeds();
+</script>
+</body>
+</html>
