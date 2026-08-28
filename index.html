@@ -145,7 +145,7 @@
     <input type="text" id="zipInput" placeholder="87102" inputmode="numeric" maxlength="5">
     <div class="chip-row">
       <button class="chip active">delivery only</button>
-      <button class="chip">within 3 mi</button>
+      <button class="chip">3-mile radius</button>
       <button class="chip">all options</button>
     </div>
   </div>
@@ -168,7 +168,7 @@
     <div class="chip-row" style="margin-top:0; margin-bottom:12px;">
       <button class="chip active">big pharm</button>
       <button class="chip active">little pharm</button>
-      <button class="chip">3-mile radius</button>
+      <button class="chip active">3-mile radius</button>
       <button class="chip active">all delivery options</button>
     </div>
     <div class="locked" id="radiusLock" style="margin-top:0; margin-bottom:12px;">
@@ -209,8 +209,8 @@ var FREE_LIMIT = 2;
 function loadMeds(){
   try{
     var raw = localStorage.getItem('rxpocalypse_meds');
-    return raw ? JSON.parse(raw) : ['lisinopril 10mg', 'sertraline 50mg'];
-  }catch(e){ return ['lisinopril 10mg', 'sertraline 50mg']; }
+    return raw ? JSON.parse(raw) : ['lisinopril 10mg'];
+  }catch(e){ return ['lisinopril 10mg']; }
 }
 function saveMeds(list){
   try{ localStorage.setItem('rxpocalypse_meds', JSON.stringify(list)); }catch(e){}
