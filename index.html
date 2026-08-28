@@ -141,6 +141,8 @@
     <h2>find a med</h2>
     <label for="medInput">medication name</label>
     <input type="text" id="medInput" placeholder="try 'metformin'...">
+    <label for="zipInput" style="margin-top:10px;">zip code</label>
+    <input type="text" id="zipInput" placeholder="87102" inputmode="numeric" maxlength="5">
     <div class="chip-row">
       <button class="chip active">delivery only</button>
       <button class="chip">within 3 mi</button>
@@ -164,7 +166,9 @@
   <div class="card">
     <h2>nearby, ready now</h2>
     <div class="chip-row" style="margin-top:0; margin-bottom:12px;">
-      <button class="chip">3 mi radius</button>
+      <button class="chip active">big pharm</button>
+      <button class="chip active">little pharm</button>
+      <button class="chip">3-mile radius</button>
       <button class="chip active">all delivery options</button>
     </div>
     <div class="locked" id="radiusLock" style="margin-top:0; margin-bottom:12px;">
@@ -260,6 +264,12 @@ function setTier(paid){
 }
 
 renderMeds();
+
+document.querySelectorAll('.chip').forEach(function(chip){
+  if(chip.textContent.trim() === 'big pharm' || chip.textContent.trim() === 'little pharm'){
+    chip.onclick = function(){ chip.classList.toggle('active'); };
+  }
+});
 </script>
 </body>
 </html>
