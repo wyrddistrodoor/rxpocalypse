@@ -60,12 +60,12 @@
   .card h2::before{content:'//'; color:var(--stamp);}
 
   label{font-size:11.5px; color:var(--sub); display:block; margin-bottom:5px; text-transform:lowercase;}
-  input[type=text]{
+  input[type=text], input[type=email], input[type=password]{
     width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:2px;
     font-size:14px; font-family:var(--body); background:#0A0A0A; color:var(--ink);
   }
-  input[type=text]::placeholder{color:#54514A;}
-  input[type=text]:focus{outline:none; border-color:var(--stamp);}
+  input::placeholder{color:#54514A;}
+  input:focus{outline:none; border-color:var(--stamp);}
 
   .chip-row{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;}
   .chip{
@@ -122,6 +122,24 @@
     padding:8px 16px; border-radius:2px; cursor:pointer; text-transform:lowercase;
   }
   .hidden{display:none;}
+
+  /* --- new styles for login card --- */
+  .auth-row{display:flex; gap:6px; margin-bottom:10px;}
+  .auth-row input{flex:1;}
+  .auth-btns{display:flex; gap:6px;}
+  .auth-btn{
+    flex:1; background:transparent; color:var(--stamp); border:1px solid var(--stamp); border-radius:2px;
+    padding:9px; font-weight:700; cursor:pointer; text-transform:lowercase; font-family:var(--body); font-size:12.5px;
+  }
+  .auth-msg{font-size:11px; color:var(--sub); margin-top:8px; text-transform:lowercase; line-height:1.5;}
+  .auth-msg.error{color:#D66A5C;}
+  .auth-msg.ok{color:var(--ok);}
+  .logged-in-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .logged-in-row .email{font-size:12.5px; color:var(--ink); word-break:break-all;}
+  .logout-btn{
+    background:transparent; color:var(--sub); border:1px solid var(--line); border-radius:2px;
+    padding:7px 12px; cursor:pointer; text-transform:lowercase; font-family:var(--body); font-size:11.5px; white-space:nowrap;
+  }
 </style>
 </head>
 <body>
@@ -138,6 +156,33 @@
   <div class="hero">
     <h1 style="text-transform:none;">we can't <em>really</em> deliver your meds at the end of the world, but we can help you find them, when times get tough.</h1>
   </div>
+
+  <!-- === new: login card === -->
+  <div class="card" id="authCard">
+    <h2>account</h2>
+
+    <div id="authLoggedOut">
+      <div class="auth-row">
+        <input type="email" id="authEmail" placeholder="email">
+      </div>
+      <div class="auth-row">
+        <input type="password" id="authPassword" placeholder="password">
+      </div>
+      <div class="auth-btns">
+        <button class="auth-btn" onclick="signUp()">sign up</button>
+        <button class="auth-btn" onclick="signIn()">log in</button>
+      </div>
+      <p class="auth-msg" id="authMsg"></p>
+    </div>
+
+    <div id="authLoggedIn" class="hidden">
+      <div class="logged-in-row">
+        <span class="email" id="authUserEmail"></span>
+        <button class="logout-btn" onclick="signOut()">log out</button>
+      </div>
+    </div>
+  </div>
+  <!-- === end login card === -->
 
   <div class="card">
     <h2>find a med</h2>
@@ -204,74 +249,136 @@
   </div>
 
 </div>
+
+<!-- === new: Supabase library === -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-var isPaid = false;
-var FREE_LIMIT = 2;
+  // --- new: connect to Supabase ---
+  var SUPABASE_URL = 'https://ljswysiupccmlbpcfrpb.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_qLCy2PN8vSxsi-qyRu_xQQ_WvnMUUAR';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function loadMeds(){
-  try{
-    var raw = localStorage.getItem('rxpocalypse_meds');
-    return raw ? JSON.parse(raw) : ['lisinopril 10mg'];
-  }catch(e){ return ['lisinopril 10mg']; }
-}
-function saveMeds(list){
-  try{ localStorage.setItem('rxpocalypse_meds', JSON.stringify(list)); }catch(e){}
-}
+  function showAuthMsg(text, kind){
+    var el = document.getElementById('authMsg');
+    el.textContent = text;
+    el.className = 'auth-msg' + (kind ? ' ' + kind : '');
+  }
 
-function renderMeds(){
-  var list = loadMeds();
-  var container = document.getElementById('medListContainer');
-  container.innerHTML = '';
-  list.forEach(function(name, i){
-    var row = document.createElement('div');
-    row.className = 'medrow';
-    row.innerHTML = '<div class="name"></div><button aria-label="remove">✕</button>';
-    row.querySelector('.name').textContent = name;
-    row.querySelector('button').onclick = function(){ removeMed(i); };
-    container.appendChild(row);
+  function signUp(){
+    var email = document.getElementById('authEmail').value.trim();
+    var password = document.getElementById('authPassword').value;
+    if(!email || !password){ showAuthMsg('enter an email and password first', 'error'); return; }
+    showAuthMsg('signing up...');
+    sb.auth.signUp({ email: email, password: password }).then(function(res){
+      if(res.error){ showAuthMsg(res.error.message, 'error'); return; }
+      showAuthMsg('check your email to confirm your account, then log in', 'ok');
+    });
+  }
+
+  function signIn(){
+    var email = document.getElementById('authEmail').value.trim();
+    var password = document.getElementById('authPassword').value;
+    if(!email || !password){ showAuthMsg('enter an email and password first', 'error'); return; }
+    showAuthMsg('logging in...');
+    sb.auth.signInWithPassword({ email: email, password: password }).then(function(res){
+      if(res.error){ showAuthMsg(res.error.message, 'error'); return; }
+      showAuthMsg('');
+      updateAuthUI(res.data.session);
+    });
+  }
+
+  function signOut(){
+    sb.auth.signOut().then(function(){
+      updateAuthUI(null);
+    });
+  }
+
+  function updateAuthUI(session){
+    var loggedOut = document.getElementById('authLoggedOut');
+    var loggedIn = document.getElementById('authLoggedIn');
+    if(session && session.user){
+      loggedOut.classList.add('hidden');
+      loggedIn.classList.remove('hidden');
+      document.getElementById('authUserEmail').textContent = session.user.email;
+    } else {
+      loggedOut.classList.remove('hidden');
+      loggedIn.classList.add('hidden');
+    }
+  }
+
+  // check if already logged in when the page loads
+  sb.auth.getSession().then(function(res){
+    updateAuthUI(res.data.session);
   });
-  var lock = document.getElementById('medLock');
-  lock.classList.toggle('hidden', isPaid || list.length <= FREE_LIMIT);
-}
+  // --- end new auth code ---
 
-function addMed(){
-  var input = document.getElementById('newMedInput');
-  var name = input.value.trim();
-  if(!name) return;
-  var list = loadMeds();
-  if(!isPaid && list.length >= FREE_LIMIT){
+  var isPaid = false;
+  var FREE_LIMIT = 2;
+
+  function loadMeds(){
+    try{
+      var raw = localStorage.getItem('rxpocalypse_meds');
+      return raw ? JSON.parse(raw) : ['lisinopril 10mg'];
+    }catch(e){ return ['lisinopril 10mg']; }
+  }
+  function saveMeds(list){
+    try{ localStorage.setItem('rxpocalypse_meds', JSON.stringify(list)); }catch(e){}
+  }
+
+  function renderMeds(){
+    var list = loadMeds();
+    var container = document.getElementById('medListContainer');
+    container.innerHTML = '';
+    list.forEach(function(name, i){
+      var row = document.createElement('div');
+      row.className = 'medrow';
+      row.innerHTML = '<div class="name"></div><button aria-label="remove">✕</button>';
+      row.querySelector('.name').textContent = name;
+      row.querySelector('button').onclick = function(){ removeMed(i); };
+      container.appendChild(row);
+    });
+    var lock = document.getElementById('medLock');
+    lock.classList.toggle('hidden', isPaid || list.length <= FREE_LIMIT);
+  }
+
+  function addMed(){
+    var input = document.getElementById('newMedInput');
+    var name = input.value.trim();
+    if(!name) return;
+    var list = loadMeds();
+    if(!isPaid && list.length >= FREE_LIMIT){
+      renderMeds();
+      return;
+    }
+    list.push(name);
+    saveMeds(list);
+    input.value = '';
     renderMeds();
-    return;
   }
-  list.push(name);
-  saveMeds(list);
-  input.value = '';
-  renderMeds();
-}
 
-function removeMed(index){
-  var list = loadMeds();
-  list.splice(index, 1);
-  saveMeds(list);
-  renderMeds();
-}
-
-function setTier(paid){
-  isPaid = paid;
-  document.getElementById('freeBtn').classList.toggle('active', !paid);
-  document.getElementById('paidBtn').classList.toggle('active', paid);
-  document.getElementById('radiusLock').classList.toggle('hidden', paid);
-  document.getElementById('paywallCard').classList.toggle('hidden', paid);
-  renderMeds();
-}
-
-renderMeds();
-
-document.querySelectorAll('.chip').forEach(function(chip){
-  if(chip.textContent.trim() === 'big pharm' || chip.textContent.trim() === 'little pharm'){
-    chip.onclick = function(){ chip.classList.toggle('active'); };
+  function removeMed(index){
+    var list = loadMeds();
+    list.splice(index, 1);
+    saveMeds(list);
+    renderMeds();
   }
-});
+
+  function setTier(paid){
+    isPaid = paid;
+    document.getElementById('freeBtn').classList.toggle('active', !paid);
+    document.getElementById('paidBtn').classList.toggle('active', paid);
+    document.getElementById('radiusLock').classList.toggle('hidden', paid);
+    document.getElementById('paywallCard').classList.toggle('hidden', paid);
+    renderMeds();
+  }
+
+  renderMeds();
+
+  document.querySelectorAll('.chip').forEach(function(chip){
+    if(chip.textContent.trim() === 'big pharm' || chip.textContent.trim() === 'little pharm'){
+      chip.onclick = function(){ chip.classList.toggle('active'); };
+    }
+  });
 </script>
 </body>
 </html>
