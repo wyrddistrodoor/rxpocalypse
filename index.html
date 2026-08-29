@@ -140,6 +140,11 @@
     background:transparent; color:var(--sub); border:1px solid var(--line); border-radius:2px;
     padding:7px 12px; cursor:pointer; text-transform:lowercase; font-family:var(--body); font-size:11.5px; white-space:nowrap;
   }
+  .link-btn{
+    background:none; border:none; color:var(--sub); font-size:11px; text-decoration:underline;
+    cursor:pointer; text-transform:lowercase; font-family:var(--body); padding:0; margin-top:2px;
+  }
+  .link-btn:hover{color:var(--stamp);}
 </style>
 </head>
 <body>
@@ -173,6 +178,16 @@
         <button class="auth-btn" onclick="signIn()">log in</button>
       </div>
       <p class="auth-msg" id="authMsg"></p>
+      <button class="link-btn" onclick="toggleForgotPassword()" id="forgotToggleBtn">forgot password?</button>
+
+      <!-- === new: forgot password form, hidden until link is clicked === -->
+      <div class="hidden" id="forgotPasswordBox" style="margin-top:10px;">
+        <div class="auth-row">
+          <input type="email" id="forgotEmail" placeholder="email">
+        </div>
+        <button class="auth-btn" style="width:100%;" onclick="sendResetEmail()">send reset link</button>
+        <p class="auth-msg" id="forgotMsg"></p>
+      </div>
     </div>
 
     <div id="authLoggedIn" class="hidden">
@@ -180,6 +195,16 @@
         <span class="email" id="authUserEmail"></span>
         <button class="logout-btn" onclick="signOut()">log out</button>
       </div>
+    </div>
+
+    <!-- === new: shown only when someone arrives via a reset-password email link === -->
+    <div class="hidden" id="resetPasswordBox">
+      <p class="auth-msg" style="margin-top:0; margin-bottom:10px;">set a new password for your account</p>
+      <div class="auth-row">
+        <input type="password" id="newPasswordInput" placeholder="new password">
+      </div>
+      <button class="auth-btn" style="width:100%;" onclick="updatePassword()">save new password</button>
+      <p class="auth-msg" id="resetMsg"></p>
     </div>
   </div>
   <!-- === end login card === -->
@@ -309,6 +334,67 @@
   // check if already logged in when the page loads
   sb.auth.getSession().then(function(res){
     updateAuthUI(res.data.session);
+  });
+
+  // --- new: forgot password flow ---
+  function toggleForgotPassword(){
+    var box = document.getElementById('forgotPasswordBox');
+    box.classList.toggle('hidden');
+  }
+
+  function sendResetEmail(){
+    var email = document.getElementById('forgotEmail').value.trim();
+    var msgEl = document.getElementById('forgotMsg');
+    if(!email){
+      msgEl.textContent = 'enter your email first';
+      msgEl.className = 'auth-msg error';
+      return;
+    }
+    msgEl.textContent = 'sending...';
+    msgEl.className = 'auth-msg';
+    sb.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://www.rxpocalypse.com'
+    }).then(function(res){
+      if(res.error){
+        msgEl.textContent = res.error.message;
+        msgEl.className = 'auth-msg error';
+        return;
+      }
+      msgEl.textContent = 'check your email for a reset link';
+      msgEl.className = 'auth-msg ok';
+    });
+  }
+
+  function updatePassword(){
+    var newPassword = document.getElementById('newPasswordInput').value;
+    var msgEl = document.getElementById('resetMsg');
+    if(!newPassword || newPassword.length < 6){
+      msgEl.textContent = 'password should be at least 6 characters';
+      msgEl.className = 'auth-msg error';
+      return;
+    }
+    msgEl.textContent = 'saving...';
+    msgEl.className = 'auth-msg';
+    sb.auth.updateUser({ password: newPassword }).then(function(res){
+      if(res.error){
+        msgEl.textContent = res.error.message;
+        msgEl.className = 'auth-msg error';
+        return;
+      }
+      msgEl.textContent = 'password updated! you\'re logged in.';
+      msgEl.className = 'auth-msg ok';
+      document.getElementById('resetPasswordBox').classList.add('hidden');
+      sb.auth.getSession().then(function(r){ updateAuthUI(r.data.session); });
+    });
+  }
+
+  // Supabase fires this event when someone arrives via a password-reset email link
+  sb.auth.onAuthStateChange(function(event, session){
+    if(event === 'PASSWORD_RECOVERY'){
+      document.getElementById('authLoggedOut').classList.add('hidden');
+      document.getElementById('authLoggedIn').classList.add('hidden');
+      document.getElementById('resetPasswordBox').classList.remove('hidden');
+    }
   });
   // --- end new auth code ---
 
