@@ -334,13 +334,17 @@
     sb.auth.signInWithPassword({ email: email, password: password }).then(function(res){
       if(res.error){ showAuthMsg(res.error.message, 'error'); return; }
       showAuthMsg('');
+      currentSession = res.data.session;
       updateAuthUI(res.data.session);
+      renderMeds();
     });
   }
 
   function signOut(){
     sb.auth.signOut().then(function(){
+      currentSession = null;
       updateAuthUI(null);
+      renderMeds();
     });
   }
 
@@ -358,8 +362,11 @@
   }
 
   // check if already logged in when the page loads
+  var currentSession = null;
   sb.auth.getSession().then(function(res){
-    updateAuthUI(res.data.session);
+    currentSession = res.data.session;
+    updateAuthUI(currentSession);
+    renderMeds();
   });
 
   // --- new: forgot password flow ---
@@ -427,52 +434,98 @@
   var isPaid = false;
   var FREE_LIMIT = 2;
 
-  function loadMeds(){
+  // --- meds: local (logged out) storage, same as before ---
+  function loadLocalMeds(){
     try{
       var raw = localStorage.getItem('rxpocalypse_meds');
       return raw ? JSON.parse(raw) : ['lisinopril 10mg'];
     }catch(e){ return ['lisinopril 10mg']; }
   }
-  function saveMeds(list){
+  function saveLocalMeds(list){
     try{ localStorage.setItem('rxpocalypse_meds', JSON.stringify(list)); }catch(e){}
   }
 
+  // --- meds: new, account-based storage (used when logged in) ---
+  function loadAccountMeds(){
+    return sb.from('saved_meds')
+      .select('id, name')
+      .order('created_at', { ascending: true })
+      .then(function(res){
+        if(res.error){ console.error(res.error); return []; }
+        return res.data;
+      });
+  }
+
   function renderMeds(){
-    var list = loadMeds();
     var container = document.getElementById('medListContainer');
-    container.innerHTML = '';
-    list.forEach(function(name, i){
-      var row = document.createElement('div');
-      row.className = 'medrow';
-      row.innerHTML = '<div class="name"></div><button aria-label="remove">✕</button>';
-      row.querySelector('.name').textContent = name;
-      row.querySelector('button').onclick = function(){ removeMed(i); };
-      container.appendChild(row);
-    });
     var lock = document.getElementById('medLock');
-    lock.classList.toggle('hidden', isPaid || list.length <= FREE_LIMIT);
+
+    if(currentSession){
+      // logged in: pull from the user's account
+      loadAccountMeds().then(function(meds){
+        container.innerHTML = '';
+        meds.forEach(function(med){
+          var row = document.createElement('div');
+          row.className = 'medrow';
+          row.innerHTML = '<div class="name"></div><button aria-label="remove">✕</button>';
+          row.querySelector('.name').textContent = med.name;
+          row.querySelector('button').onclick = function(){ removeMed(med.id); };
+          container.appendChild(row);
+        });
+        lock.classList.toggle('hidden', isPaid || meds.length <= FREE_LIMIT);
+      });
+    } else {
+      // logged out: use this browser's local list, same as before
+      var list = loadLocalMeds();
+      container.innerHTML = '';
+      list.forEach(function(name, i){
+        var row = document.createElement('div');
+        row.className = 'medrow';
+        row.innerHTML = '<div class="name"></div><button aria-label="remove">✕</button>';
+        row.querySelector('.name').textContent = name;
+        row.querySelector('button').onclick = function(){ removeMed(i); };
+        container.appendChild(row);
+      });
+      lock.classList.toggle('hidden', isPaid || list.length <= FREE_LIMIT);
+    }
   }
 
   function addMed(){
     var input = document.getElementById('newMedInput');
     var name = input.value.trim();
     if(!name) return;
-    var list = loadMeds();
-    if(!isPaid && list.length >= FREE_LIMIT){
+
+    if(currentSession){
+      loadAccountMeds().then(function(meds){
+        if(!isPaid && meds.length >= FREE_LIMIT){ renderMeds(); return; }
+        sb.from('saved_meds').insert({ name: name, user_id: currentSession.user.id }).then(function(res){
+          if(res.error){ console.error(res.error); return; }
+          input.value = '';
+          renderMeds();
+        });
+      });
+    } else {
+      var list = loadLocalMeds();
+      if(!isPaid && list.length >= FREE_LIMIT){ renderMeds(); return; }
+      list.push(name);
+      saveLocalMeds(list);
+      input.value = '';
       renderMeds();
-      return;
     }
-    list.push(name);
-    saveMeds(list);
-    input.value = '';
-    renderMeds();
   }
 
-  function removeMed(index){
-    var list = loadMeds();
-    list.splice(index, 1);
-    saveMeds(list);
-    renderMeds();
+  function removeMed(idOrIndex){
+    if(currentSession){
+      sb.from('saved_meds').delete().eq('id', idOrIndex).then(function(res){
+        if(res.error){ console.error(res.error); return; }
+        renderMeds();
+      });
+    } else {
+      var list = loadLocalMeds();
+      list.splice(idOrIndex, 1);
+      saveLocalMeds(list);
+      renderMeds();
+    }
   }
 
   function setTier(paid){
@@ -483,8 +536,6 @@
     document.getElementById('paywallCard').classList.toggle('hidden', paid);
     renderMeds();
   }
-
-  renderMeds();
 
   document.querySelectorAll('.chip').forEach(function(chip){
     if(chip.textContent.trim() === 'big pharm' || chip.textContent.trim() === 'little pharm'){
