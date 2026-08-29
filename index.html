@@ -145,6 +145,14 @@
     cursor:pointer; text-transform:lowercase; font-family:var(--body); padding:0; margin-top:2px;
   }
   .link-btn:hover{color:var(--stamp);}
+  .pw-wrap{position:relative;}
+  .pw-wrap input{padding-right:60px;}
+  .pw-toggle{
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    background:none; border:none; color:var(--sub); font-size:10.5px; text-transform:lowercase;
+    cursor:pointer; font-family:var(--body); text-decoration:underline; padding:2px;
+  }
+  .pw-toggle:hover{color:var(--stamp);}
 </style>
 </head>
 <body>
@@ -171,7 +179,10 @@
         <input type="email" id="authEmail" placeholder="email">
       </div>
       <div class="auth-row">
-        <input type="password" id="authPassword" placeholder="password">
+        <div class="pw-wrap" style="flex:1;">
+          <input type="password" id="authPassword" placeholder="password">
+          <button type="button" class="pw-toggle" onclick="togglePwVisibility('authPassword', this)">show</button>
+        </div>
       </div>
       <div class="auth-btns">
         <button class="auth-btn" onclick="signUp()">sign up</button>
@@ -201,7 +212,10 @@
     <div class="hidden" id="resetPasswordBox">
       <p class="auth-msg" style="margin-top:0; margin-bottom:10px;">set a new password for your account</p>
       <div class="auth-row">
-        <input type="password" id="newPasswordInput" placeholder="new password">
+        <div class="pw-wrap" style="flex:1;">
+          <input type="password" id="newPasswordInput" placeholder="new password">
+          <button type="button" class="pw-toggle" onclick="togglePwVisibility('newPasswordInput', this)">show</button>
+        </div>
       </div>
       <button class="auth-btn" style="width:100%;" onclick="updatePassword()">save new password</button>
       <p class="auth-msg" id="resetMsg"></p>
@@ -287,6 +301,18 @@
     var el = document.getElementById('authMsg');
     el.textContent = text;
     el.className = 'auth-msg' + (kind ? ' ' + kind : '');
+  }
+
+  // --- new: let people reveal what they've typed into a password field ---
+  function togglePwVisibility(inputId, btn){
+    var input = document.getElementById(inputId);
+    if(input.type === 'password'){
+      input.type = 'text';
+      btn.textContent = 'hide';
+    } else {
+      input.type = 'password';
+      btn.textContent = 'show';
+    }
   }
 
   function signUp(){
